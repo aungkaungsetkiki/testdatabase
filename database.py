@@ -5,21 +5,42 @@ from psycopg2 import sql
 from psycopg2.extras import DictCursor
 from datetime import datetime
 import pytz
+from urllib.parse import urlparse
 
 MYANMAR_TIMEZONE = pytz.timezone('Asia/Yangon')
 
-# Database connection
 def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("PGDATABASE"),
-        user=os.getenv("PGUSER"),
-        password=os.getenv("PGPASSWORD"),
-        host=os.getenv("PGHOST"),
-        port=os.getenv("PGPORT")
-    )
+    """Get database connection using either DATABASE_URL or individual variables"""
+    db_url = os.getenv("DATABASE_URL")
+    
+    if db_url:
+        # Parse DATABASE_URL if available
+        result = urlparse(db_url)
+        dbname = result.path[1:]  # Remove leading slash
+        user = result.username
+        password = result.password
+        host = result.hostname
+        port = result.port
+        
+        return psycopg2.connect(
+            dbname=dbname,
+            user=user,
+            password=password,
+            host=host,
+            port=port
+        )
+    else:
+        # Fall back to individual variables
+        return psycopg2.connect(
+            dbname=os.getenv("PGDATABASE"),
+            user=os.getenv("PGUSER"),
+            password=os.getenv("PGPASSWORD"),
+            host=os.getenv("PGHOST"),
+            port=os.getenv("PGPORT")
+        )
 
 # Initialize database tables
-def init_db():
+async def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
